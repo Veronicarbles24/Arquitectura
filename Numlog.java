@@ -1,278 +1,188 @@
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
-import java.util.Scanner;
 
-// ==================== ENUMS ====================
-enum ResultadoComparacion {
-    MAYOR, MENOR, IGUAL
-}
-
-enum ResultadoJuego {
-    GANADO, CONTINUAR, ERROR_RANGO
-}
-
-// ==================== CLASE RANGO ====================
-class Rango {
-    private final int valorInicial;
-    private final int valorFinal;
-    private final int AMPLITUD_MAXIMA = 20;
-
-    public Rango(int inicio, int fin) {
-        this.valorInicial = inicio;
-        this.valorFinal = fin;
-    }
-
-    public boolean esValido() {
-        return valorInicial < valorFinal && 
-               getAmplitud() <= AMPLITUD_MAXIMA &&
-               valorInicial >= 1 && valorFinal <= 100;
-    }
-
-    public int getAmplitud() {
-        return valorFinal - valorInicial + 1;
-    }
-
-    public boolean contiene(int numero) {
-        return numero >= valorInicial && numero <= valorFinal;
-    }
-
-    public int getValorInicial() { return valorInicial; }
-    public int getValorFinal() { return valorFinal; }
-
-    @Override
-    public String toString() {
-        return valorInicial + " al " + valorFinal;
-    }
-}
-
-// ==================== CLASE NUMERO SECRETO ====================
-class NumeroSecreto {
-    private int valor;
-    private Rango rango;
-
-    public NumeroSecreto(Rango rango) {
-        this.rango = rango;
-        generarNumero();
-    }
-
-    public void generarNumero() {
-        Random rand = new Random();
-        this.valor = rand.nextInt(rango.getAmplitud()) + rango.getValorInicial();
-    }
-
-    public ResultadoComparacion compararCon(int numero) {
-        if (numero == valor) return ResultadoComparacion.IGUAL;
-        return numero < valor ? ResultadoComparacion.MENOR : ResultadoComparacion.MAYOR;
-    }
-
-    public int getValor() { return valor; }
-    public boolean esIgual(int numero) { return numero == valor; }
-}
-
-// ==================== CLASE INTENTO ====================
-class Intento {
-    private int numeroIngresado;
+public class Numlog {
     private int numeroSecreto;
-    private ResultadoComparacion resultado;
-    private LocalDateTime fechaHora;
-
-    public Intento(int numero, int secreto, ResultadoComparacion resultado) {
-        this.numeroIngresado = numero;
-        this.numeroSecreto = secreto;
-        this.resultado = resultado;
-        this.fechaHora = LocalDateTime.now();
+    private int intentos;
+   
+    
+    private Temporizador temporizador;
+    private Validador validador;
+    private Mensajero mensajero;
+    private Usuario usuario;
+    private Nivel nivelActual;
+    
+    public Numlog() {
+        temporizador = new Temporizador();
+        validador = new Validador();
+        mensajero = new Mensajero();
+        usuario = new Usuario();
     }
-
-    public int getNumeroIngresado() { return numeroIngresado; }
-    public ResultadoComparacion getResultado() { return resultado; }
-    public int getNumeroSecreto() { return numeroSecreto; }
-    public LocalDateTime getFechaHora() { return fechaHora; }
-}
-
-// ==================== CLASE VALIDADOR ====================
-class Validador {
-    public static boolean validarEntrada(String entrada) {
-        return esNumero(entrada);
-    }
-
-    public static boolean esNumero(String entrada) {
-        try {
-            Integer.parseInt(entrada);
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
+    
+    public void seleccionarNivel(String nivel) {
+        switch (nivel) {
+            case "1":
+                nivelActual = Nivel.PRINCIPIANTE;
+                break;
+            case "2":
+                nivelActual = Nivel.INTERMEDIO;
+                break;
+            case "3":
+                nivelActual = Nivel.AVANZADO;
+                break;
+            default:
+                nivelActual = Nivel.PRINCIPIANTE;
         }
     }
-
-    public static boolean esRangoValido(int inicio, int fin) {
-        return inicio < fin && (fin - inicio + 1) <= 20 && inicio >= 1 && fin <= 100;
+    
+    public void generarNumeroSecreto() {
+        Random random = new Random();
+        int max = obtenerRangoMaximo();
+        numeroSecreto = random.nextInt(max) + 1;
     }
-
-    public static boolean validarNumeroEnRango(int numero, Rango rango) {
-        return rango.contiene(numero);
-    }
-}
-
-// ==================== CLASE JUEGO LOGICA ====================
-class JuegoNumLogic {
-    private Rango rangoActual;
-    private NumeroSecreto numeroSecreto;
-    private List<Intento> intentos;
-    private int contadorIntentos;
-    private boolean juegoActivo;
-
-    public JuegoNumLogic() {
-        intentos = new ArrayList<>();
-        juegoActivo = false;
-    }
-
-    public void configurarRango(int inicio, int fin) {
-        rangoActual = new Rango(inicio, fin);
-        if (rangoActual.esValido()) {
-            numeroSecreto = new NumeroSecreto(rangoActual);
-            contadorIntentos = 0;
-            juegoActivo = true;
-            intentos.clear();
+    
+    private int obtenerRangoMaximo() {
+        switch (nivelActual) {
+            case PRINCIPIANTE:
+                return 10;
+            case INTERMEDIO:
+                return 100;
+            case AVANZADO:
+                return 300;
+            default:
+                return 10;
         }
     }
-
-    public ResultadoJuego procesarIntento(int numero) {
-        if (!rangoActual.contiene(numero)) {
-            return ResultadoJuego.ERROR_RANGO;
-        }
-
-        contadorIntentos++;
-        ResultadoComparacion resultado = numeroSecreto.compararCon(numero);
-        intentos.add(new Intento(numero, numeroSecreto.getValor(), resultado));
-
-        if (resultado == ResultadoComparacion.IGUAL) {
-            juegoActivo = false;
-            return ResultadoJuego.GANADO;
-        }
-
-        return ResultadoJuego.CONTINUAR;
+    
+    public boolean validarNumero(String numero) {
+        int max = obtenerRangoMaximo();
+        return validador.esNumeroValido(numero, 1, max);
     }
-
-    public void finalizarJuego() {
-        juegoActivo = false;
-    }
-
-    public void reiniciarPartida() {
-        if (rangoActual != null) {
-            numeroSecreto = new NumeroSecreto(rangoActual);
-            contadorIntentos = 0;
-            juegoActivo = true;
-            intentos.clear();
+    
+    public String compararNumero(int numero) {
+        if (numero < numeroSecreto) {
+            return "mayor";
+        } else if (numero > numeroSecreto) {
+            return "menor";
+        } else {
+            return "correcto";
         }
     }
-
-    public int getContadorIntentos() { return contadorIntentos; }
-    public boolean isJuegoActivo() { return juegoActivo; }
-    public Rango getRangoActual() { return rangoActual; }
-    public NumeroSecreto getNumeroSecreto() { return numeroSecreto; }
-}
-
-// ==================== CLASE CONSOLA ====================
-public class NumblogConsola {
-    private Scanner scanner;
-    private JuegoNumLogic juego;
-
-    public NumblogConsola() {
-        scanner = new Scanner(System.in);
-        juego = new JuegoNumLogic();
-    }
-
-    public void ejecutar() {
-        mostrarMensaje("Bienvenido a Numblog");
+    
+    public String calcularEficiencia(long tiempoSegundos) {
+        int max = obtenerRangoMaximo();
+        double eficienciaIdeal = Math.log(max) / Math.log(2); 
         
-        Rango rango = solicitarRango();
-        juego.configurarRango(rango.getValorInicial(), rango.getValorFinal());
+        Eficiencia nivel;
+        if (intentos <= eficienciaIdeal * 1.5) {
+            nivel = Eficiencia.AVANZADA;
+        } else if (intentos <= eficienciaIdeal * 3) {
+            nivel = Eficiencia.MEDIA;
+        } else {
+            nivel = Eficiencia.BAJA;
+        }
         
-        int intentosMaximos = Integer.MAX_VALUE;
+        return nivel.toString();
+    }
+    
+    public void iniciarTemporizador() {
+        temporizador.iniciar();
+        intentos = 0;
+    }
+    
+    public void detenerTemporizador() {
+        temporizador.detener();
+    }
+    
+    public void reiniciarJuego() {
+        numeroSecreto = 0;
+        intentos = 0;
+    }
+    
+    public void jugar() {
+        // Mostrar bienvenida
+        mensajero.mostrarBienvenida();
         
-        while (juego.isJuegoActivo() && juego.getContadorIntentos() < intentosMaximos) {
-            mostrarMensaje("Ingresa un número entre " + rango + ": ");
-            String entrada = scanner.nextLine();
+        boolean continuarJugando = true;
+        
+        while (continuarJugando) {
+            // Configuración inicial
+            mensajero.mostrarOpcionesNivel();
+            String nivelSeleccionado = usuario.elegirNivel();
+            seleccionarNivel(nivelSeleccionado);
             
-            if (!Validador.validarEntrada(entrada)) {
-                mostrarError("Ingrese solo números");
-                continue;
-            }
+            // Generar número secreto aleatorio
+            generarNumeroSecreto();
             
-            int numero = Integer.parseInt(entrada);
+            // Inicializar contador
+            iniciarTemporizador();
             
-            if (!Validador.validarNumeroEnRango(numero, rango)) {
-                mostrarError("El número debe estar entre " + rango);
-                continue;
-            }
+            int max = obtenerRangoMaximo();
+            System.out.println("\n¡Adivina el número entre 1 y " + max + "!");
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
             
-            ResultadoJuego resultado = juego.procesarIntento(numero);
+            boolean adivinado = false;
             
-            switch (resultado) {
-                case GANADO:
-                    mostrarMensaje("¡Felicidades! Ganaste con " + juego.getContadorIntentos() + " intentos.");
-                    juego.finalizarJuego();
-                    break;
-                case CONTINUAR:
-                    ResultadoComparacion comparacion = juego.getNumeroSecreto().compararCon(numero);
-                    if (comparacion == ResultadoComparacion.MENOR) {
-                        mostrarMensaje("Pista: El número secreto es MAYOR");
-                    } else {
-                        mostrarMensaje("Pista: El número secreto es MENOR");
+            // Ciclo principal del juego
+            while (!adivinado) {
+                System.out.print("Ingresa tu número: ");
+                
+                try {
+                    int numeroUsuario = usuario.ingresarNumero();
+                    intentos++;
+                    
+                    // Validar entrada
+                    if (!validador.estaEnRango(numeroUsuario, 1, max)) {
+                        mensajero.mostrarErrorEntrada();
+                        intentos--; // No contar intentos inválidos
+                        continue;
                     }
-                    break;
-                case ERROR_RANGO:
-                    mostrarError("Número fuera de rango");
-                    break;
+                    
+                    // Comparar número
+                    String resultado = compararNumero(numeroUsuario);
+                    
+                    if (resultado.equals("correcto")) {
+                        // Número adivinado - ganó
+                        detenerTemporizador();
+                        long tiempoTranscurrido = temporizador.obtenerTiempoTranscurridoSegundos();
+                        
+                        System.out.println("\nFelicidades! ¡Has adivinado el número secreto!");
+                        System.out.println("\n Resultados:");
+                        System.out.println("   • Número secreto: " + numeroSecreto);
+                        System.out.println("   • Intentos: " + intentos);
+                        System.out.println("   • Tiempo: " + tiempoTranscurrido + " segundos");
+                        
+                        // Calcular eficiencia
+                        String eficiencia = calcularEficiencia(tiempoTranscurrido);
+                        mensajero.mostrarEficiencia(eficiencia);
+                        
+                        adivinado = true;
+                    } else if (resultado.equals("mayor")) {
+                        mensajero.mostrarPista("El número es MAYOR");
+                    } else {
+                        mensajero.mostrarPista("El número es MENOR");
+                    }
+                    
+                } catch (Exception e) {
+                    mensajero.mostrarErrorEntrada();
+                    usuario = new Usuario(); // Reiniciar scanner si hay error
+                }
             }
             
-            if (juego.getContadorIntentos() >= intentosMaximos && juego.isJuegoActivo()) {
-                mostrarMensaje("¡Agotaste tus " + intentosMaximos + " intentos! El número era: " + 
-                             juego.getNumeroSecreto().getValor());
-                juego.finalizarJuego();
+            // Preguntar si quiere continuar
+            if (mensajero.preguntarContinuar()) {
+                continuarJugando = usuario.decidirContinuar();
+                if (continuarJugando) {
+                    reiniciarJuego();
+                    System.out.println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+                }
             }
         }
         
-        scanner.close();
+        System.out.println("\n¡Gracias por jugar! ¡Hasta pronto!");
     }
-
-    private Rango solicitarRango() {
-        while (true) {
-            mostrarMensaje("Elige un rango del 1 al 100 cuya amplitud no supere 20 números, ejemplo del 1 al 20");
-            
-            mostrarMensaje("Ingresa el valor inicial: ");
-            String inicioStr = scanner.nextLine();
-            mostrarMensaje("Ingresa el valor final: ");
-            String finStr = scanner.nextLine();
-            
-            if (!Validador.esNumero(inicioStr) || !Validador.esNumero(finStr)) {
-                mostrarError("Debes ingresar números válidos");
-                continue;
-            }
-            
-            int inicio = Integer.parseInt(inicioStr);
-            int fin = Integer.parseInt(finStr);
-            
-            if (Validador.esRangoValido(inicio, fin)) {
-                return new Rango(inicio, fin);
-            } else {
-                mostrarError("Rango inválido. Asegúrate que: inicio < fin, amplitud ≤ 20, y esté entre 1 y 100");
-            }
-        }
-    }
-
-    private void mostrarMensaje(String mensaje) {
-        System.out.println(mensaje);
-    }
-
-    private void mostrarError(String error) {
-        System.out.println("Error: " + error);
-    }
-
+    
     public static void main(String[] args) {
-        NumblogConsola consola = new NumblogConsola();
-        consola.ejecutar();
+        Numlog juego = new Numlog();
+        juego.jugar();
     }
 }
