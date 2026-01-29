@@ -1,3 +1,10 @@
+/**
+ * Clase Mensajero
+ * 
+ * Esta clase se encarga exclusivamente de mostrar mensajes por consola
+ * para el juego Numlog. Centraliza toda la interacción textual con el usuario,
+ * por ende solo imprime no cuenta con logica del juego.
+ */
 public class Mensajero {
     
     public void mostrarBienvenida() {
